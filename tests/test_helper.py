@@ -1,6 +1,6 @@
 import unittest
 
-from sqlglot.helper import merge_ranges, name_sequence, tsort
+from sqlglot.helper import merge_ranges, name_sequence, truncate_sql_comment, tsort
 
 
 class TestHelper(unittest.TestCase):
@@ -46,3 +46,32 @@ class TestHelper(unittest.TestCase):
         self.assertEqual([(0, 1), (2, 3)], merge_ranges([(0, 1), (2, 3)]))
         self.assertEqual([(0, 3)], merge_ranges([(0, 1), (1, 3)]))
         self.assertEqual([(0, 1), (2, 4)], merge_ranges([(2, 3), (0, 1), (3, 4)]))
+
+    def test_truncate_sql_comment(self):
+        # Short strings
+        self.assertEqual(truncate_sql_comment(""), "")
+        self.assertEqual(truncate_sql_comment("hello world"), "hello world")
+        self.assertEqual(truncate_sql_comment("  hello world  "), "hello world")
+        self.assertEqual(truncate_sql_comment("\t hello world \t"), "hello world")
+
+        # Multiline strings and whitespace
+        self.assertEqual(truncate_sql_comment("line1\nline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("line1\r\nline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("line1\rline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("line1\n\nline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("line1\r\n\r\nline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("  \n  line1\nline2  \n  "), "line1 line2")
+
+        # Truncation
+        self.assertEqual(truncate_sql_comment("a" * 64), "a" * 64)
+        self.assertEqual(truncate_sql_comment("a" * 65), f"{'a' * 61}...")
+        self.assertEqual(len(truncate_sql_comment("a" * 65)), 64)
+        self.assertEqual(truncate_sql_comment("hello beautiful world", max_len=10), "hello b...")
+        self.assertEqual(len(truncate_sql_comment("hello beautiful world", max_len=10)), 10)
+        self.assertEqual(
+            truncate_sql_comment(
+                "this is a very long multiline\nsql comment that needs truncation", max_len=20
+            ),
+            "this is a very lo...",
+        )
+        self.assertEqual(truncate_sql_comment("hello", max_len=3), "...")
