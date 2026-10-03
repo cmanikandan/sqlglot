@@ -479,3 +479,24 @@ class SingleValuedMapping(Mapping[K, V]):
 
     def __iter__(self) -> Iterator[K]:
         return iter(self._keys)
+
+
+def truncate_sql_comment(text: str, max_len: int = 64) -> str:
+    """
+    Sanitizes and truncates a SQL comment.
+
+    Strips leading and trailing whitespace, replaces internal newlines with a single space,
+    and truncates to max_len (appending \"...\" if truncated).
+
+    Args:
+        text: The comment text to sanitize.
+        max_len: The maximum length of the returned comment.
+
+    Returns:
+        The sanitized comment.
+    """
+    text = re.sub(r"[\r\n]+", " ", text.strip())
+    if len(text) > max_len:
+        text = f"{text[:max(0, max_len - 3)]}..."[:max_len]
+
+    return text

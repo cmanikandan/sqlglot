@@ -1,6 +1,6 @@
 import unittest
 
-from sqlglot.helper import merge_ranges, name_sequence, tsort
+from sqlglot.helper import merge_ranges, name_sequence, truncate_sql_comment, tsort
 
 
 class TestHelper(unittest.TestCase):
@@ -46,3 +46,44 @@ class TestHelper(unittest.TestCase):
         self.assertEqual([(0, 1), (2, 3)], merge_ranges([(0, 1), (2, 3)]))
         self.assertEqual([(0, 3)], merge_ranges([(0, 1), (1, 3)]))
         self.assertEqual([(0, 1), (2, 4)], merge_ranges([(2, 3), (0, 1), (3, 4)]))
+
+    def test_truncate_sql_comment(self):
+        # Short strings and whitespace stripping
+        self.assertEqual(truncate_sql_comment("hello world"), "hello world")
+        self.assertEqual(truncate_sql_comment("   hello world   "), "hello world")
+        self.assertEqual(truncate_sql_comment("\t\tleading and trailing\t\t"), "leading and trailing")
+        self.assertEqual(truncate_sql_comment(""), "")
+        self.assertEqual(truncate_sql_comment("   "), "")
+
+        # Exact max length (no truncation)
+        self.assertEqual(truncate_sql_comment("a" * 64), "a" * 64)
+        self.assertEqual(truncate_sql_comment("1234567890", max_len=10), "1234567890")
+
+        # Multiline strings with internal newlines
+        self.assertEqual(truncate_sql_comment("line1\nline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("line1\r\nline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("line1\rline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("line1\n\nline2"), "line1 line2")
+        self.assertEqual(truncate_sql_comment("\n  line1\r\nline2  \n"), "line1 line2")
+        self.assertEqual(
+            truncate_sql_comment("multiline\nsql\r\ncomment\rtest"),
+            "multiline sql comment test",
+        )
+
+        # Truncation
+        self.assertEqual(
+            truncate_sql_comment("a" * 65),
+            "a" * 61 + "...",
+        )
+        self.assertEqual(
+            truncate_sql_comment("hello beautiful world", max_len=10),
+            "hello b...",
+        )
+        self.assertEqual(
+            truncate_sql_comment("12345678901", max_len=10),
+            "1234567...",
+        )
+        self.assertEqual(
+            truncate_sql_comment("line 1\nline 2\nline 3\nline 4", max_len=15),
+            "line 1 line ...",
+        )
