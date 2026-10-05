@@ -12,6 +12,7 @@ setup(
             "sqlglot-mypy >= 2.3.0.post2; python_version >= '3.10'",
             "mypy; python_version < '3.10'",
             "setuptools_scm",
+            "wheel>=0.46.2",
             "pandas",
             "pandas-stubs",
             "python-dateutil",
